@@ -1,0 +1,45 @@
+/*
+ * app.h
+ *
+ *  Created on: Mar 31, 2026
+ *      Author: miyab
+ */
+
+#ifndef INC_APP_H_
+#define INC_APP_H_
+
+
+#include "main.h"
+#include "stdbool.h"
+
+typedef enum {
+    APP_MODE_IDLE = 0,
+    APP_MODE_SYNC_MOTION,
+    APP_MODE_HOMING,
+    APP_MODE_ERROR
+} AppMode_t;
+
+typedef enum {
+    APP_HOMING_SEQ_IDLE = 0,
+    APP_HOMING_SEQ_AXIS1_START,//1
+    APP_HOMING_SEQ_AXIS1_WAIT,//2
+    APP_HOMING_SEQ_AXIS2_START,//3
+    APP_HOMING_SEQ_AXIS2_WAIT,//4
+    APP_HOMING_SEQ_AXIS3_START,//5
+    APP_HOMING_SEQ_AXIS3_WAIT,//6
+    APP_HOMING_SEQ_DONE,//7
+    APP_HOMING_SEQ_ERROR//8
+} AppHomingSeqState_t;
+
+HAL_StatusTypeDef app_init(void);
+HAL_StatusTypeDef app_update(void);
+
+HAL_StatusTypeDef app_start_homing_all(void);
+HAL_StatusTypeDef app_set_mode_sync_motion(void);
+HAL_StatusTypeDef app_set_mode_idle(void);
+
+HAL_StatusTypeDef app_get_mode(AppMode_t *mode);
+HAL_StatusTypeDef app_get_homing_seq_state(AppHomingSeqState_t *state);
+
+
+#endif /* INC_APP_H_ */

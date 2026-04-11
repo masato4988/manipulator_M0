@@ -1,0 +1,256 @@
+/*
+ * app.c
+ *
+ *  Created on: Mar 31, 2026
+ *      Author: miyab
+ */
+
+
+#include "app.h"
+
+#include "stepper_hw.h"
+#include "axis.h"
+#include "sync_motion.h"
+#include "homing_control.h"
+
+typedef struct {
+    AppMode_t mode;
+    AppHomingSeqState_t homing_seq_state;
+    bool initialized;
+} AppState_t;
+
+static AppState_t g_app_state = {
+    .mode = APP_MODE_IDLE,
+    .homing_seq_state = APP_HOMING_SEQ_IDLE,
+    .initialized = false
+};
+
+static HAL_StatusTypeDef app_update_homing_sequence(void);
+static void app_enter_error(void);
+
+HAL_StatusTypeDef app_init(void)
+{
+    if (stepper_init() != HAL_OK) {
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    if (axis_init() != HAL_OK) {
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    if (sync_motion_init() != HAL_OK) {
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    if (homing_control_init() != HAL_OK) {
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    g_app_state.mode = APP_MODE_IDLE;
+    g_app_state.homing_seq_state = APP_HOMING_SEQ_IDLE;
+    g_app_state.initialized = true;
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_update(void)
+{
+    if (g_app_state.initialized == false) {
+        return HAL_ERROR;
+    }
+
+    switch (g_app_state.mode) {
+    case APP_MODE_IDLE:
+        /* 何もしない */
+        break;
+
+    case APP_MODE_SYNC_MOTION:
+        if (sync_motion_update() != HAL_OK) {
+            app_enter_error();
+            return HAL_ERROR;
+        }
+        if (axis_update_all() != HAL_OK) {
+			app_enter_error();
+			return HAL_ERROR;
+		}
+        break;
+
+    case APP_MODE_HOMING:
+        if (homing_control_update() != HAL_OK) {
+            app_enter_error();
+            return HAL_ERROR;
+        }
+
+        if (app_update_homing_sequence() != HAL_OK) {
+            app_enter_error();
+            return HAL_ERROR;
+        }
+        break;
+
+    case APP_MODE_ERROR:
+        /* 必要なら安全停止維持 */
+        break;
+
+    default:
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_start_homing_all(void)
+{
+    if (g_app_state.initialized == false) {
+        return HAL_ERROR;
+    }
+
+    /* 通常動作中なら必要に応じて停止 */
+    if (sync_motion_stop_all() != HAL_OK) {
+        app_enter_error();
+        return HAL_ERROR;
+    }
+
+    g_app_state.mode = APP_MODE_HOMING;
+    g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS1_START;
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_set_mode_sync_motion(void)
+{
+    if (g_app_state.initialized == false) {
+        return HAL_ERROR;
+    }
+
+    if (g_app_state.mode == APP_MODE_HOMING) {
+        /* 原点復帰中は勝手に切り替えない方が安全 */
+        return HAL_BUSY;
+    }
+
+    g_app_state.mode = APP_MODE_SYNC_MOTION;
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_set_mode_idle(void)
+{
+    if (g_app_state.initialized == false) {
+        return HAL_ERROR;
+    }
+
+    g_app_state.mode = APP_MODE_IDLE;
+    g_app_state.homing_seq_state = APP_HOMING_SEQ_IDLE;
+
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_get_mode(AppMode_t *mode)
+{
+    if (mode == NULL) {
+        return HAL_ERROR;
+    }
+
+    *mode = g_app_state.mode;
+    return HAL_OK;
+}
+
+HAL_StatusTypeDef app_get_homing_seq_state(AppHomingSeqState_t *state)
+{
+    if (state == NULL) {
+        return HAL_ERROR;
+    }
+
+    *state = g_app_state.homing_seq_state;
+    return HAL_OK;
+}
+
+static HAL_StatusTypeDef app_update_homing_sequence(void)
+{
+    bool done = false;
+
+    switch (g_app_state.homing_seq_state) {
+
+    case APP_HOMING_SEQ_IDLE:
+        break;
+
+    case APP_HOMING_SEQ_AXIS1_START:
+        if (homing_control_start(1) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS1_WAIT;
+        break;
+
+    case APP_HOMING_SEQ_AXIS1_WAIT:
+        if (homing_control_is_done(1, &done) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        if (done) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS2_START;
+        }
+        break;
+
+    case APP_HOMING_SEQ_AXIS2_START:
+        if (homing_control_start(2) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS2_WAIT;
+        break;
+
+    case APP_HOMING_SEQ_AXIS2_WAIT:
+        if (homing_control_is_done(2, &done) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        if (done) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS3_START;
+        }
+        break;
+
+    case APP_HOMING_SEQ_AXIS3_START:
+        if (homing_control_start(3) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        g_app_state.homing_seq_state = APP_HOMING_SEQ_AXIS3_WAIT;
+        break;
+
+    case APP_HOMING_SEQ_AXIS3_WAIT:
+        if (homing_control_is_done(3, &done) != HAL_OK) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+            return HAL_ERROR;
+        }
+        if (done) {
+            g_app_state.homing_seq_state = APP_HOMING_SEQ_DONE;
+        }
+        break;
+
+    case APP_HOMING_SEQ_DONE:
+        /* 原点復帰完了後はIDLEへ戻す。必要ならSYNC_MOTIONへ移行でもよい */
+        g_app_state.mode = APP_MODE_IDLE;
+        g_app_state.homing_seq_state = APP_HOMING_SEQ_IDLE;
+        break;
+
+    case APP_HOMING_SEQ_ERROR:
+        app_enter_error();
+        return HAL_ERROR;
+
+    default:
+        g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
+}
+
+static void app_enter_error(void)
+{
+    g_app_state.mode = APP_MODE_ERROR;
+    g_app_state.homing_seq_state = APP_HOMING_SEQ_ERROR;
+}
