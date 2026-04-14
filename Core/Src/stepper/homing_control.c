@@ -4,7 +4,7 @@
  *  Created on: Mar 30, 2026
  *      Author: miyab
  */
-#include "homing_control.h"
+#include "stepper/homing_control.h"
 #include "home_sw.h"
 #include "system_config.h"
 

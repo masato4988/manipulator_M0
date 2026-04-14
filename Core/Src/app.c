@@ -8,10 +8,10 @@
 
 #include "app.h"
 
-#include "stepper_hw.h"
-#include "axis.h"
-#include "sync_motion.h"
-#include "homing_control.h"
+#include "stepper/stepper_hw.h"
+#include "stepper/axis.h"
+#include "stepper/sync_motion.h"
+#include "stepper/homing_control.h"
 
 typedef struct {
     AppMode_t mode;

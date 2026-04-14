@@ -1,6 +1,6 @@
-#include "axis.h"
+#include "stepper/axis.h"
 #include "system_config.h"
-#include "stepper_hw.h"
+#include "stepper/stepper_hw.h"
 #include <math.h>
 
 static AxisControlState_t AxisControlState[AXIS_COUNT];

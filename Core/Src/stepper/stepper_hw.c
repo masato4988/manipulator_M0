@@ -5,7 +5,7 @@
  *      Author: miyab
  */
 #include "main.h"
-#include "stepper_hw.h"
+#include "stepper/stepper_hw.h"
 #include "tim.h"
 #include <stdbool.h>
 #include <math.h>

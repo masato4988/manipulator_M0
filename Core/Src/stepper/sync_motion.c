@@ -23,13 +23,13 @@ q3 = (m3 * K_M3_TO_Q3) - (m2 * K_M2_TO_Q3)
 (m3 * K_M3_TO_Q3) = (m2 * K_M2_TO_Q3) + q3
 m3 = (q3 + (m2 * K_M2_TO_Q3)) / K_M3_TO_Q3
 */
-#include <homing_control.h>
-#include "axis.h"
-#include "stepper_hw.h"
+#include <stepper/homing_control.h>
+#include "stepper/axis.h"
+#include "stepper/stepper_hw.h"
 #include "math_utils.h"
 #include <math.h>
 #include <stdbool.h>
-#include <sync_motion.h>
+#include <stepper/sync_motion.h>
 
 /* --- 関節→モータ変換係数 [rad/step] --- */
 #define K_M1_TO_Q1   (0.000196349540849362f)
