@@ -136,3 +136,113 @@ sts_status_t sts3215_read_u16(sts3215_t *servo, uint8_t address, uint16_t *value
     *value = (uint16_t)rx[5] | ((uint16_t)rx[6] << 8);
     return STS_OK;
 }
+
+sts_status_t sts3215_write_u8(sts3215_t *servo, uint8_t address, uint8_t value){
+    if (servo == NULL || servo->bus == NULL) {
+        return STS_ERROR;
+    }
+
+    uint8_t params[2];
+    params[0] = address;
+    params[1] = value;
+
+    uint8_t tx[STS_MAX_PACKET_SIZE];
+    uint8_t tx_len = 0;
+
+    uint8_t rx[STS_MAX_PACKET_SIZE];
+    uint16_t rx_len = 0;
+
+    if (!sts_build_packet(
+    		servo->id,
+			STS_INST_WRITE,
+			params,
+			2,
+			tx,
+			&tx_len))
+    {
+        return STS_ERROR;
+    }
+
+    sts_bus_status_t s;
+
+    s = sts_bus_send(servo->bus, tx, tx_len);
+    if (s != STS_BUS_OK) {
+        return sts_convert_status(s);
+    }
+
+    s = sts_bus_receive_status(
+    		servo->bus,
+			servo->id,
+			rx,
+			sizeof(rx),
+			&rx_len);
+
+    return sts_convert_status(s);
+}
+
+sts_status_t sts3215_write_u16(sts3215_t *servo, uint8_t address, uint16_t value){
+    if (servo == NULL || servo->bus == NULL) {
+        return STS_ERROR;
+    }
+
+    uint8_t params[3];
+
+    params[0] = address;
+
+    params[1] = (uint8_t)(value & 0xFF);       // low
+    params[2] = (uint8_t)((value >> 8) & 0xFF); // high
+
+    uint8_t tx[STS_MAX_PACKET_SIZE];
+    uint8_t tx_len = 0;
+
+    uint8_t rx[STS_MAX_PACKET_SIZE];
+    uint16_t rx_len = 0;
+
+    if (!sts_build_packet(
+            servo->id,
+            STS_INST_WRITE,
+            params,
+            3,
+            tx,
+            &tx_len))
+    {
+        return STS_ERROR;
+    }
+
+    sts_bus_status_t s;
+
+    s = sts_bus_send(servo->bus, tx, tx_len);
+    if (s != STS_BUS_OK) {
+        return sts_convert_status(s);
+    }
+
+    s = sts_bus_receive_status(
+            servo->bus,
+            servo->id,
+            rx,
+            sizeof(rx),
+            &rx_len);
+
+    return sts_convert_status(s);
+}
+
+sts_status_t sts3215_set_torque_enable(sts3215_t *servo, bool enable){
+    uint8_t value;
+
+    if (enable)
+        value = 1;
+    else
+        value = 0;
+
+    return sts3215_write_u8(
+            servo,
+            STS_ADDR_TORQUE_ENABLE,
+            value);
+}
+
+sts_status_t sts3215_set_goal_position(sts3215_t *servo, uint16_t position){
+    return sts3215_write_u16(
+            servo,
+            STS_ADDR_GOAL_POSITION,
+            position);
+}

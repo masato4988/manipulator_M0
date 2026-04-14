@@ -192,6 +192,36 @@ void app_sts_test(void){
     }
 }
 
+void app_servo_move_test(void)
+{
+    sts_bus_init(&g_sts_bus, &huart1, 20, 20);
+    sts3215_init(&g_servo1, &g_sts_bus, 11);
+    uint16_t pos;
+
+    printf("READ POS\r\n");
+
+    sts3215_read_u16(
+            &g_servo1,
+            56,
+            &pos);
+
+    printf("POS = %u\r\n", pos);
+
+    printf("TORQUE ON\r\n");
+
+    sts3215_set_torque_enable(
+            &g_servo1,
+            true);
+
+    HAL_Delay(100);
+
+    printf("MOVE +1000\r\n");
+
+    sts3215_set_goal_position(
+            &g_servo1,
+            pos + 1000);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -245,12 +275,12 @@ int main(void)
 
 
 
-  printf("start_homing\r\n");
-  app_start_homing_all();
-  HomingState_t state1;
-  HomingState_t state2;
-  HomingState_t state3;
-  AppHomingSeqState_t state;
+//  printf("start_homing\r\n");
+//  app_start_homing_all();
+//  HomingState_t state1;
+//  HomingState_t state2;
+//  HomingState_t state3;
+//  AppHomingSeqState_t state;
 //  while(1){//
 ////	  app_get_homing_seq_state(&state);
 //	  homing_control_get_state(1, &state1);
@@ -272,7 +302,8 @@ int main(void)
 //	  Error_Handler();
 //  }
 
-  app_sts_test();
+//  app_sts_test();
+  app_servo_move_test();
   /* USER CODE END 2 */
 
   /* Infinite loop */

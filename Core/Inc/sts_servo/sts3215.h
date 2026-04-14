@@ -12,6 +12,15 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+
+#define STS_ADDR_TORQUE_ENABLE      40
+#define STS_ADDR_GOAL_ACCELERATION  41
+#define STS_ADDR_GOAL_POSITION      42
+
+#define STS_ADDR_PRESENT_POSITION   56
+#define STS_ADDR_PRESENT_TEMP       63
+
+
 typedef enum {
     STS_OK = 0,
     STS_ERROR,
@@ -30,5 +39,11 @@ sts_status_t sts3215_ping(sts3215_t *servo);
 sts_status_t sts3215_read_u8(sts3215_t *servo, uint8_t address, uint8_t *value);
 sts_status_t sts3215_read_u16(sts3215_t *servo, uint8_t address, uint16_t *value);
 
+sts_status_t sts3215_write_u8(sts3215_t *servo, uint8_t address, uint8_t value);
+sts_status_t sts3215_write_u16(sts3215_t *servo, uint8_t address, uint16_t value);
+
+/* 便利関数 */
+sts_status_t sts3215_set_torque_enable(sts3215_t *servo, bool enable);
+sts_status_t sts3215_set_goal_position(sts3215_t *servo, uint16_t position);
 
 #endif /* INC_STS_SERVO_STS3215_H_ */
